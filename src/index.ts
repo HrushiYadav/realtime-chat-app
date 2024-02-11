@@ -9,7 +9,6 @@ var server = http.createServer(function(request:any, response:any) {
 server.listen(8080, function() {
     console.log((new Date()) + ' Server is listening on port 8080');
 });
-
 const wsServer = new WebSocketServer({
     httpServer: server,
     // You should not use autoAcceptConnections for production
