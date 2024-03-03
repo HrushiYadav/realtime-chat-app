@@ -10,7 +10,7 @@ interface Room {
     users: User[]
 }
 export class UserManager {
-    
+
     private rooms: Map<string,Room>;
     constructor(){
         this.rooms = new Map<string,Room>()
@@ -52,8 +52,10 @@ export class UserManager {
             console.log("Room not found");
             return;
         }
-       room.users.forEach(({conn})=>{
-        conn.sendUTF(JSON.stringify(message))
-       })
+ 
+        room.users.forEach(({conn})=>{
+            console.log("outggoing message"+ JSON.stringify(message));
+             conn.sendUTF(JSON.stringify(message))
+         })
     }
 }

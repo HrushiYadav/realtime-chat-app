@@ -8,9 +8,10 @@ import {
   UpvoteMessageType,
   UserMessageType,
 } from "./messages/incomingMessages";
-import {OutgoingMessage,
-  SupportedMessage as OutgoingSupportedMessages
-} from"./messages/outgoingMessages";
+import {
+  OutgoingMessage,
+  SupportedMessage as OutgoingSupportedMessages,
+} from "./messages/outgoingMessages";
 import { InMemoryStore } from "./store/InMemoryStore";
 
 var server = http.createServer(function (request: any, response: any) {
@@ -66,49 +67,55 @@ wsServer.on("request", function (request) {
 });
 
 function messageHandler(ws: connection, message: IncomingMessage) {
+  console.log("incoming message" + JSON.stringify(message));
   if (message.type == SupportedMessage.JoinRoom) {
     const payload = message.payload;
-    userManager.addUser(payload.name, payload.userId, payload.roomId,ws);
+    userManager.addUser(payload.name, payload.userId, payload.roomId, ws);
   }
 
   if (message.type == SupportedMessage.SendMessage) {
-      const payload = message.payload;
-      const user = userManager.getUser(payload.roomId,payload.userId);
-      if(!user){
-          console.log("User not found in db");
-          return;
-      }
-     let chat= store.addChat(payload.userId, user.name, payload.roomId, payload.message)
-     if(!chat){
+    const payload = message.payload;
+    const user = userManager.getUser(payload.roomId, payload.userId);
+    if (!user) {
+      console.log("User not found in db");
       return;
-     }
-    const outgoingPayload: OutgoingMessage={
-      type: OutgoingSupportedMessages.AddChat,
-        payload:{
-          chatId: chat.id,
-          roomId: payload.roomId,
-          message: payload.message,
-          name: user.name,
-          upvotes: 0  
-        } 
     }
-    userManager.broadcast(payload.roomId,payload.userId,outgoingPayload);
+    let chat = store.addChat(
+      payload.userId,
+      user.name,
+      payload.roomId,
+      payload.message
+    );
+    if (!chat) {
+      return;
+    }
+    const outgoingPayload: OutgoingMessage = {
+      type: OutgoingSupportedMessages.AddChat,
+      payload: {
+        chatId: chat.id,
+        roomId: payload.roomId,
+        message: payload.message,
+        name: user.name,
+        upvotes: 0,
+      },
+    };
+    userManager.broadcast(payload.roomId, payload.userId, outgoingPayload);
   }
 
-  if(message.type == SupportedMessage.UpvoteMessage){
+  if (message.type == SupportedMessage.UpvoteMessage) {
     const payload = message.payload;
     const chat = store.upvote(payload.userId, payload.roomId, payload.chatId);
-    if(!chat){
-       return;
+    if (!chat) {
+      return;
     }
-    const outgoingPayload: OutgoingMessage={
+    const outgoingPayload: OutgoingMessage = {
       type: OutgoingSupportedMessages.UpdateChat,
-        payload:{
-          chatId: payload.chatId,
-          roomId: payload.roomId,
-          upvotes: chat.upvotes.length
-        } 
-    }
+      payload: {
+        chatId: payload.chatId,
+        roomId: payload.roomId,
+        upvotes: chat.upvotes.length,
+      },
+    };
     userManager.broadcast(payload.roomId, payload.userId, outgoingPayload);
   }
 }
