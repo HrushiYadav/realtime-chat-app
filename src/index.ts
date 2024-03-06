@@ -29,7 +29,7 @@ server.listen(8080, function () {
 });
 const wsServer = new WebSocketServer({
   httpServer: server,
-  autoAcceptConnections: true,
+  autoAcceptConnections: false,
 });
 
 function originIsAllowed(origin: string) {
@@ -38,6 +38,7 @@ function originIsAllowed(origin: string) {
 }
 
 wsServer.on("request", function (request) {
+  console.log("inside connect");
   if (!originIsAllowed(request.origin)) {
     // Make sure we only accept requests from an allowed origin
     request.reject();
@@ -50,24 +51,19 @@ wsServer.on("request", function (request) {
   var connection = request.accept("echo-protocol", request.origin);
   console.log(new Date() + " Connection accepted.");
   connection.on("message", function (message) {
+    console.log(message);
     //Todo add rate limitting logic here
     if (message.type === "utf8") {
       try {
+        console.log("indie with message" + message.utf8Data)
         messageHandler(connection, JSON.parse(message.utf8Data));
       } catch (e) {}
-      console.log("Received Message: " + message.utf8Data);
-      connection.sendUTF(message.utf8Data);
+      
     }
-  });
-  connection.on("close", function (reasonCode, description) {
-    console.log(
-      new Date() + " Peer " + connection.remoteAddress + " disconnected."
-    );
   });
 });
 
 function messageHandler(ws: connection, message: IncomingMessage) {
-  console.log("incoming message" + JSON.stringify(message));
   if (message.type == SupportedMessage.JoinRoom) {
     const payload = message.payload;
     userManager.addUser(payload.name, payload.userId, payload.roomId, ws);
@@ -76,10 +72,12 @@ function messageHandler(ws: connection, message: IncomingMessage) {
   if (message.type == SupportedMessage.SendMessage) {
     const payload = message.payload;
     const user = userManager.getUser(payload.roomId, payload.userId);
+    console.log("first");
     if (!user) {
       console.log("User not found in db");
       return;
     }
+    console.log("second");
     let chat = store.addChat(
       payload.userId,
       user.name,
@@ -89,6 +87,7 @@ function messageHandler(ws: connection, message: IncomingMessage) {
     if (!chat) {
       return;
     }
+    console.log("third");
     const outgoingPayload: OutgoingMessage = {
       type: OutgoingSupportedMessages.AddChat,
       payload: {
@@ -96,8 +95,8 @@ function messageHandler(ws: connection, message: IncomingMessage) {
         roomId: payload.roomId,
         message: payload.message,
         name: user.name,
-        upvotes: 0,
-      },
+        upvotes: 0
+      }
     };
     userManager.broadcast(payload.roomId, payload.userId, outgoingPayload);
   }
